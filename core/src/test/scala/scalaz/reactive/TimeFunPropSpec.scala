@@ -7,7 +7,7 @@ import scalaz.reactive.Time.T
 import scalaz.reactive.TimeFun._
 import scalaz.reactive.laws.ApplicativeLaws
 
-class TimeFunSpec extends Specification with ScalaCheck with TimeFunInstances {
+class TimeFunPropSpec extends Specification with ScalaCheck with TimeFunInstances {
 
   def is = "TimeFunSpec".title ^ s2"""
    Generate a mix of K and Fun TimeFuns

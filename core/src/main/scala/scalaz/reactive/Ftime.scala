@@ -3,6 +3,7 @@ package scalaz.reactive
 import scalaz._
 import Scalaz._
 import scalaz.Ordering._
+import scalaz.zio.IO
 
 trait Improving[A] {
   def exact: A
@@ -78,40 +79,36 @@ object Improving {
           futImpV.map(impV => impV.compare(_))
     )
 
-//    def asAgree(a: F[Ordering], b: F[Ordering]): F[Ordering] =
-//      for {
-//        oa <- a
-//        ob <- b
-//        r <- if (oa == ob) a else Sync[F].halt[Ordering]
-//      } yield r
+    def asAgree(a: F[Ordering], b: F[Ordering]): F[Ordering] =
+      for {
+        oa <- a
+        ob <- b
+        r <- if (oa == ob) a else Sync[F].halt[Ordering]
+      } yield r
 
+    // Here we need:
     // wComp t = minComp t ‘unamb‘ (uComp t ‘asAgree‘ vComp t)
-    lazy val comp: F[A => Ordering] = {
-      val minCompT: F[A => Ordering] = minComp
-//      val uCompT: F[A => Ordering] = futImpU.map(i => i.compare(_))
-//      val vCompT: F[A => Ordering] = futImpV.map(i => i.compare(_))
+    lazy val wComp: F[A => Ordering] = {
+      val uComp: F[A => Ordering] = futImpU.map(i => i.compare(_))
+      val vComp: F[A => Ordering] = futImpV.map(i => i.compare(_))
 
       val combined: F[A => Ordering] = {
-//        minCompT.flatMap(f => {
-//          val xx: F[A => Ordering] = uCompT.map(fu => ((a: A) => fu(a)))
-//          val combCombined: F[A => Ordering] = ???
-//          uCompT.map(f => (a => f(a)))
-//        })
-//        val zz: F[A => Ordering] = (uCompT |@| vCompT) { (uc, vc) => uc }
-//        (minCompT |@| zz) { (uc: A => Ordering, vc: A => Ordering) => uc
-        minCompT
+
+        // ??? ???
+        minComp
+
       }
 
       combined
     }
 
-    (uLeqV |@| uMinV |@| comp) { (uLeqV: Boolean, uMinV: A, comp) =>
+    (uLeqV |@| uMinV |@| wComp) { (uLeqV: Boolean, uMinV: A, comp) =>
       val improving: Improving[A] = new Improving[A] {
         override def exact: A = uMinV
         override def compare(t: A)(implicit ord: Order[A]): scalaz.Ordering =
           comp(t)
       }
-      println(s"Constucted minLe response from uLeqV=$uLeqV, uMinV=$uMinV")
+      println(s"Constucted minLe response from uLeqV=$uLeqV, uMinV=${uMinV.shows}")
       (improving, uLeqV)
     }
   }
