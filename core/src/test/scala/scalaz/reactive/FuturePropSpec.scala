@@ -44,17 +44,20 @@ class FuturePropSpec
 
   def slowFuture =
     for {
-      num <- Gen.choose[Int](0, 100)
-      delay <- Gen.choose[Int](300, 500)
+      num <- Gen.choose[Int](0, 10000)
+      delay <- Gen.choose[Int](1, 140)
     } yield
-      (delay, Future[IO1, Int](
-        IO.sync(println(s"$now will wait $delay for value $num"))
-          .flatMap(_ => {
-            IO.point(())
-              .delay(delay milli)
-              .map(_ => println(s"$now waited $delay for value $num"))
-          })
-          .map(_ => TimedValue(Improving.now, _ => num)))
+      (
+        delay,
+        Future[IO1, Int](
+          IO.sync(println(s"$now will wait $delay for value $num"))
+            .flatMap(_ => {
+              IO.point(())
+                .delay(delay milli)
+                .map(_ => println(s"$now waited $delay for value $num"))
+            })
+            .map(_ => TimedValue(Improving.now, _ => num))
+        )
       )
 
   def appendTwoExactFutures = forAll(exactFuture, exactFuture) {
@@ -65,17 +68,23 @@ class FuturePropSpec
   }
 
   def appendTwoSlowFutures = forAll(slowFuture, slowFuture) {
-    (df1: (Int, Future[IO1, Int]), df2: (Int, Future[IO1, Int]) ) =>
-      println(s"Running delayed futures ${df1._1} and ${df2._1}")
-      val val1 = rts.unsafeRun((df1._2 |+| df2._2).ftv).get
-      println(s"computed val1 for delayed futures ${df1._1} and ${df2._1}: $val1")
-      val val2 = rts.unsafeRun((df2._2 |+| df1._2).ftv).get
-      println(s"computed val2 for delayed futures ${df1._1} and ${df2._1}: $val2")
-      val1 must beEqualTo(val2)
+    (df1: (Int, Future[IO1, Int]), df2: (Int, Future[IO1, Int])) =>
+      (Math.abs(df1._1 - df2._1 ) > 60 && df1._1 > 0 && df2._1 > 0 ) ==> {
+        println(s"Running delayed futures ${df1._1} and ${df2._1}")
+        val val1 = rts.unsafeRun((df1._2 |+| df2._2).ftv).get
+        println(
+          s"computed val1 for delayed futures ${df1._1} and ${df2._1}: $val1"
+        )
+        val val2 = rts.unsafeRun((df2._2 |+| df1._2).ftv).get
+        println(
+          s"computed val2 for delayed futures ${df1._1} and ${df2._1}: $val2"
+        )
+        val1 must beEqualTo(val2)
+      }
   }
 
   def appendExactToSlowFutures = forAll(exactFuture, slowFuture) {
-    (f1:  Future[IO1, Int], df2: (Int, Future[IO1, Int]) ) =>
+    (f1: Future[IO1, Int], df2: (Int, Future[IO1, Int])) =>
       println(s"Running exact $f1 and delayed ${df2._1}")
 
       val val1 = rts.unsafeRun((f1 |+| df2._2).ftv).get

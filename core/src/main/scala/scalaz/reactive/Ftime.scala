@@ -3,7 +3,6 @@ package scalaz.reactive
 import scalaz._
 import Scalaz._
 import scalaz.Ordering._
-import scalaz.zio.IO
 
 trait Improving[A] {
   def exact: A
@@ -79,18 +78,18 @@ object Improving {
           futImpV.map(impV => impV.compare(_))
     )
 
-    def asAgree(a: F[Ordering], b: F[Ordering]): F[Ordering] =
-      for {
-        oa <- a
-        ob <- b
-        r <- if (oa == ob) a else Sync[F].halt[Ordering]
-      } yield r
+//    def asAgree(a: F[Ordering], b: F[Ordering]): F[Ordering] =
+//      for {
+//        oa <- a
+//        ob <- b
+//        r <- if (oa == ob) a else Sync[F].halt[Ordering]
+//      } yield r
 
     // Here we need:
     // wComp t = minComp t ‘unamb‘ (uComp t ‘asAgree‘ vComp t)
     lazy val wComp: F[A => Ordering] = {
-      val uComp: F[A => Ordering] = futImpU.map(i => i.compare(_))
-      val vComp: F[A => Ordering] = futImpV.map(i => i.compare(_))
+//      val uComp: F[A => Ordering] = futImpU.map(i => i.compare(_))
+//      val vComp: F[A => Ordering] = futImpV.map(i => i.compare(_))
 
       val combined: F[A => Ordering] = {
 
@@ -108,7 +107,7 @@ object Improving {
         override def compare(t: A)(implicit ord: Order[A]): scalaz.Ordering =
           comp(t)
       }
-      println(s"Constucted minLe response from uLeqV=$uLeqV, uMinV=${uMinV.shows}")
+      println(s"Constructed minLe response from uLeqV=$uLeqV, uMinV=${uMinV}")
       (improving, uLeqV)
     }
   }

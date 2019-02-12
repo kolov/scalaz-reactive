@@ -19,10 +19,10 @@ class FutureUnitSpec extends FlatSpec with FutureInstances with MustMatchers {
   val DateFormat = "HH:mm:ss.SSS"
   def now = new SimpleDateFormat(DateFormat).format(System.currentTimeMillis())
 
-  def appendTwoSlowFutures = {
+  "slow futures" should " return the same result when appended" in {
 
-    val delay1 = 100
-    val value1 = 100
+    val delay1 = 1
+    val value1 = 1
     val f1 = Future[IO1, Int](
       IO.sync(println(s"$now will wait $delay1 for value $value1"))
         .flatMap(_ => {
@@ -33,8 +33,8 @@ class FutureUnitSpec extends FlatSpec with FutureInstances with MustMatchers {
         .map(_ => TimedValue(Improving.now, _ => value1))
     )
 
-    val delay2 = 500
-    val value2 = 500
+    val delay2 = 20
+    val value2 = 2
     val f2 = Future[IO1, Int](
       IO.sync(println(s"$now will wait $delay2 for value $value2"))
         .flatMap(_ => {
