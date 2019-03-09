@@ -10,6 +10,9 @@ import scalaz.zio.duration.Duration
 
 object V1 {
 
+
+  // typeclass for stream JdG
+
   // effect needed by FRP
   trait Frp[F[_]] extends Monad[F] {
     def async[A](a: => A): F[A]
@@ -213,4 +216,12 @@ object Main extends App {
   def run(args: List[String]) =
     myAppLogic.fold(_ => 1, _ => 0)
 
+//  type Future[A] = Io[(Time, Fiber[A])]
+  // effectful monoid
+
+  trait MonoidM[F[_], A] {
+    def zero: F[A]
+
+    def append(l: => A, r: => A): F[A]
+  }
 }
