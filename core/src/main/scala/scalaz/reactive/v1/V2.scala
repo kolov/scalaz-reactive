@@ -1,43 +1,45 @@
 package scalaz.reactive.v2
 
-import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeUnit
 
-import scalaz.zio.{ stream, _ }
+import scalaz.zio._
 import scalaz.zio.clock.Clock
 import scalaz.zio.duration.Duration
-import scalaz.zio.stream._
 
 object Main extends App {
 
   case class Tick(name: String)
+  private val duration = Duration(1, TimeUnit.SECONDS)
 
   val queue = Queue.unbounded[Tick]
-  queue.map(q => q.offer(Tick("start")))
-  val stream = queue.map(Stream.fromQueue(_))
 
-  val sink: ZIO[Any, Throwable, Unit] = stream.flatMap(s => s.foreach(t => IO.effect(println(t))))
+  def tick(q: Queue[Tick], name: String): UIO[Boolean] =
+    q.offer(Tick(name))
 
-  val duration: Duration = Duration(1, SECONDS)
-
-  def ticks(count: Int): ZIO[Any with Clock, Throwable, Unit] =
+  def ticks(q: Queue[Tick], interval: Duration, count: Int): ZIO[Any with Clock, Nothing, Unit] =
     for {
-      _ <- queue.map(q => q.offer(Tick(s"N$count")))
-      _ = println("1")
-      _ <- ZIO.effect(()).delay(duration)
+      _ <- tick(q, s"1-$count")
+      _ <- ticks(q, duration, count + 1).delay(duration)
     } yield ()
 
-  val myAppLogic: ZIO[Any with Clock, Nothing, UIO[Exit[Throwable, List[Unit]]]] = for {
-    y <- ZIO.forkAll(
+  def sink[A](
+    s: scalaz.zio.stream.Stream[Any with Clock, Throwable, A]
+  ): ZIO[Any with Clock, Throwable, Unit] =
+    s.foreach(t => IO.effect(println(t)))
+
+  val myAppLogic = for {
+    q  <- queue
+    st = scalaz.zio.stream.Stream.fromQueue(q)
+    f <- ZIO.forkAll(
           List(
-            ticks(0),
-            sink,
-            ZIO.effect(println("hello")),
-            ZIO.effect(()).delay(Duration(10, SECONDS)).map(_ => println("10 sec passed"))
+            ticks(q, duration, 0),
+            sink(st)
           )
         )
-
-  } yield y.await
+    _ <- f.await
+  } yield ()
 
   def run(args: List[String]) =
-    myAppLogic.flatMap(x => x).fold(_ => { println("???"); 1 }, a => { println(s" $a !!!"); 0 })
+    myAppLogic.fold(_ => 1, _ => 0)
+
 }
