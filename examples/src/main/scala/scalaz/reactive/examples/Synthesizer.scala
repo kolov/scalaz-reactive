@@ -1,7 +1,7 @@
 package scalaz.reactive.examples
 
 import scalaz.reactive._
-import scalaz.zio.{App, IO}
+import scalaz.zio.{App, IO, ZIO}
 
 import scala.io.StdIn
 
@@ -35,7 +35,7 @@ object Synthesizer extends App {
       'g' -> PG
     )
 
-  def build(eKey: Event[Char]) = {
+  def build(eKey: Event[Char]): RIO[Behaviour[Octave]] = {
         val ePitch: Event[Pitch] = Event.joinMaybes(
           eKey.map(table.get(_))
         )
@@ -51,12 +51,8 @@ object Synthesizer extends App {
         }
     )
 
-    val bOctave: Behaviour[Octave] = Behaviour(
-      Reactive(
-        TimeFun.K(0),
-        Event.accumE(0)(eOctChange).map((x: Octave) => TimeFun.K(x))
-      )
-    )
+    val acc: RIO[Event[TimeFun.K[Octave]]] = Event.accumE(0)(eOctChange).map(_.map((x: Octave) => TimeFun.K(x)))
+    val bOctave  = acc.flatMap( e => Behaviour(TimeFun.K(0), e))
 
     //    val bPitch: Behaviour[Pitch] = Behaviour(
     //      Reactive(TimeFun.K(PA), ePitch.map(p => TimeFun.K(p)))
@@ -64,7 +60,7 @@ object Synthesizer extends App {
 
     //    val bNote = (bOctave |@| bPitch) { Note.apply _ }
 
-    bOctave
+      bOctave
 
   }
 

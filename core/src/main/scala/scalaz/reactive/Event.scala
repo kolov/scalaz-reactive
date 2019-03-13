@@ -1,7 +1,7 @@
 package scalaz.reactive
 
 import scalaz._, Scalaz._
-import scalaz.zio.{Queue, UIO, ZIO, stream}
+import scalaz.zio.{ Queue, UIO, ZIO, stream }
 import scalaz.zio.stream.Stream
 
 trait Event[+A] {
@@ -33,13 +33,19 @@ object Event {
 //  //accumR :: a → Event (a → a) → Reactive a
 //  def accumR[A](a: A)(e: Event[A => A]): Reactive[A] = Reactive(a, accumE(a)(e))
 //
-//  //  accumE :: a → Event (a → a) → Event a
-//  def accumE[A](a: A)(e: Event[A => A]): Event[A] =
-//    Event(e.value.map { case (t, r) => (t, accumR(r.head(a))(r.tail)) })
-//
-  def joinMaybes[A](e: Event[Option[A]]): Event[A] = {
-    Event(e.stream.filter(_.isDefined).map(_.get))
+  //  accumE :: a → Event (a → a) → Event a
+  def accumE[A](a: A)(e: Event[A => A]): RIO[Event[A]] = {
+
+    val producer: Producer[A] = { emit =>
+      ???
+      }
+
+    Event.fromProducer(producer)
+
   }
+
+  def joinMaybes[A](e: Event[Option[A]]): Event[A] =
+    Event(e.stream.filter(_.isDefined).map(_.get))
 }
 
 trait EventInstances {
@@ -60,7 +66,7 @@ object EventInstances extends EventInstances
 
 trait EventSyntax extends EventInstances {
   implicit class EventOps[A](event: Event[A]) {
-    def merge(other: Event[A]) = event |+| other
+    def merge(other: Event[A])      = event |+| other
     def map[B](f: A => B): Event[B] = Functor[Event[A]].map(event)(f)
   }
 }
